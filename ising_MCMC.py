@@ -2,27 +2,28 @@
 """
 ising_MCMC.py
 
-ising hamiltonian: -J sum pairs - H 
-
-another implementation of the 2D array would be of course as 1D with
-appropriate indicing
+ising hamiltonian: -J sum pairs - H sum spins
+but i think H = 0
 
 questions:
-what's the coupling constant?
-what's the critical temperature?
-do we do temperature in beta or in K
+-what's the coupling constant?
+-what's the critical temperature? (i think lecture notes describe it in
+terms of J and zeta)
+-do we do temperature in beta or in K
 
 @author - Victor Zhao
 
 """
 
+KBOLTZMANN = 1.3806488e-23      # joule/kelvin
+# note 0.0019872041 kcal/(mol K)
 import numpy as np
 
 class IsingSystem:
     """ 
     the (2D) ising system
     """
-    def __init__(self, size):
+    def __init__(self, size, sweeps, temperature):
         self.system = np.random.random_integers(0, 1, [size, size])
         self.system *= 2
         self.system -= 1
@@ -32,7 +33,12 @@ class IsingSystem:
         # Used to calculate delta E from neighboring interactions:
         self.neighbor_positions = np.array([[0,1], [1,0], [0,-1], [-1,0]])
 
-        self.initialized = False # False until self.initialize_simulation is called
+        times = np.arange(sweeps)
+        magnetization_timeseries = np.zeros(sweeps)
+        energy_timeseries = np.zeros(sweeps)
+        self.system_length = size
+        self.steps_per_sweep = self.system.size
+        self.beta = KBOLTZMANN * temperature
         return
 
     def calculate_energy(self):
@@ -63,21 +69,35 @@ class IsingSystem:
                 # our position is some edge spin and no PBC in effect
                 continue
             neighboring_spins[i] = neighboring_spin
-        new_positoin_spin = -1 * self.system[position]
+        new_position_spin = -1 * self.system[position]
         deltaE = (np.sum(new_position_spin * neighboring_spins) -
-                  np.sum(self.system[position] * neighboring_spins)
+                  np.sum(self.system[position] * neighboring_spins))
         return deltaE
             
     def calculate_magnetization(self):
         return np.sum(self.system)
 
-    def initialize_simulation(self):
-        """ 
-        call before running sim 
-        """
-        self.initialized = True
-        
+    def run_simulation(self, sweeps):
+        """ where steps is number of sweeps"""
+        if not self.initialized:
+            return
+        for i in xrange(sweeps):
+            for j in xrange(self.steps_per_sweep):
+                selected_spin = np.random.random_integers(0, self.system_length, 2)
+                deltaE = self.calculate_deltaE(selected_spin)
+                if deltaE < 0:
+                    self.system[selected_spin] *= -1
+                    continue
+                else:
+                    weight = boltmann_weight(deltaE, self.beta)
+                    if np.random.rand() < weight:
+                        self.system[selected_spin] *= -1
+            self.magnetization_timeseries[i] = self.calculate_magnetization()
+            self.energy_timeseries[i] = self.calculate_energy()
+        return
 
+def boltzmann_weight(energy, beta):
+    return np.exp(-1 * energy * beta)
 
 def parse_args():
     import argparse
@@ -85,10 +105,13 @@ def parse_args():
     parser.add_argument('grid_size', help="NxN")
     parser.add_argument('temperature', type=float)
     parser.add_argument('--num-sweeps', type=int, default=2500)
+    parser.add_argument('--out-pkl', required=True, help='pkl log file')
     return parser.parse_args()
 
 def main(args):
     ising_system = IsingSystem(args.grid_size)
+    ising_system.initialize_simulation(args.num_sweeps, args.temperature)
+    
 
 
 if __name__ == "__main__":
