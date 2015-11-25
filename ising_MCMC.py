@@ -19,8 +19,9 @@ do we do temperature in beta or in K
 import numpy as np
 
 class IsingSystem:
-    """ the (2D) ising system"""
-
+    """ 
+    the (2D) ising system
+    """
     def __init__(self, size):
         self.system = np.random.random_integers(0, 1, [size, size])
         self.system *= 2
@@ -31,7 +32,7 @@ class IsingSystem:
         # Used to calculate delta E from neighboring interactions:
         self.neighbor_positions = np.array([[0,1], [1,0], [0,-1], [-1,0]])
 
-        self.initialized = False
+        self.initialized = False # False until self.initialize_simulation is called
         return
 
     def calculate_energy(self):
@@ -53,18 +54,19 @@ class IsingSystem:
     def calculate_deltaE(self, position):
         """
         Position had better be a 2-tuple or list of size 2.
-
         """
-        neighboring_spins = []
-        for offset in self.neighbor_positions:
+        neighboring_spins = np.zeros(4)
+        for i, offset in enumerate(self.neighbor_positions):
             try:
                 neighboring_spin = self.system[position + offset]
             except IndexError:
-                continue            # our position is some edge spin
-            neighboring_spins.append(neighboring_spin)
-        neighboring_spins = np.array(neighboring_spins)
-        position_spin = -1 * self.system[position]
-        return np.sum(2 * position_spin * neighboring_spins)
+                # our position is some edge spin and no PBC in effect
+                continue
+            neighboring_spins[i] = neighboring_spin
+        new_positoin_spin = -1 * self.system[position]
+        deltaE = (np.sum(new_position_spin * neighboring_spins) -
+                  np.sum(self.system[position] * neighboring_spins)
+        return deltaE
             
     def calculate_magnetization(self):
         return np.sum(self.system)
@@ -87,8 +89,6 @@ def parse_args():
 
 def main(args):
     ising_system = IsingSystem(args.grid_size)
-
-    
 
 
 if __name__ == "__main__":
