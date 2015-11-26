@@ -15,7 +15,7 @@ terms of J and zeta)
 
 """
 
-KBOLTZMANN = 1.3806488e-23      # joule/kelvin
+# KBOLTZMANN = 1.3806488e-23      # joule/kelvin
 # note 0.0019872041 kcal/(mol K)
 import numpy as np
 import cPickle as pkl
@@ -35,13 +35,14 @@ class IsingSystem:
         # Used to calculate delta E from neighboring interactions:
         self.neighbor_positions = np.array([[0,1], [1,0], [0,-1], [-1,0]])
 
-        self.times = np.arange(sweeps)
-        self.magnetization_timeseries = np.zeros(sweeps)
-        self.energy_timeseries = np.zeros(sweeps)
-        self.success_timeseries = np.zeros(sweeps, dtype=int) # track number of accepted moves per sweep
+        self.times = np.arange(sweeps+1)
+        self.magnetization_timeseries = np.zeros(sweeps+1)
+        self.energy_timeseries = np.zeros(sweeps+1)
+        self.success_timeseries = np.zeros(sweeps+1, dtype=int) # track number of accepted moves per sweep
         self.system_length = size
         self.steps_per_sweep = self.system.size
-        self.beta = KBOLTZMANN * temperature
+        # self.beta = 1/(KBOLTZMANN * temperature)
+        self.beta = 1/temperature
         return
 
     def calculate_energy(self):
@@ -51,11 +52,11 @@ class IsingSystem:
         """
         energy = 0.
         for row in self.system:
-            energy += np.sum(
+            energy += -1 * np.sum(
                 [self.coupling_constant * i * j for i,j in zip(row[:-1], row[1:])]
                 )
         for col in np.rollaxis(self.system, -1):
-            energy += np.sum(
+            energy += -1 * np.sum(
                 [self.coupling_constant * i * j for i,j in zip(col[:-1], col[1:])]
                 )
         return energy
@@ -67,14 +68,14 @@ class IsingSystem:
         neighboring_spins = np.zeros(4)
         for i, offset in enumerate(self.neighbor_positions):
             try:
-                neighboring_spin = self.system[position + offset]
+                neighboring_spin = self.system[tuple(position + offset)]
             except IndexError:
                 # our position is some edge spin and no PBC in effect
                 continue
             neighboring_spins[i] = neighboring_spin
-        new_position_spin = -1 * self.system[position]
-        deltaE = (np.sum(new_position_spin * neighboring_spins) -
-                  np.sum(self.system[position] * neighboring_spins))
+        new_position_spin = -1 * self.system[tuple(position)]
+        deltaE = (-self.coupling_constant * np.sum(new_position_spin * neighboring_spins) -
+                  -self.coupling_constant * np.sum(self.system[tuple(position)] * neighboring_spins))
         return deltaE
             
     def calculate_magnetization(self):
@@ -82,30 +83,41 @@ class IsingSystem:
 
     def run_simulation(self, verbose=False):
         """ where steps is number of sweeps"""
+        self.magnetization_timeseries[0] = self.calculate_magnetization()
+        self.energy_timeseries[0] = self.calculate_energy()
+        self.success_timeseries[0] = 0
         if verbose:
             print "{0:>10} {1:>15} {2:>15} {3:>15}".format(
-                "Times", "Magnetization", "Energy", "NumSuccesses")
-        for i in xrange(times.size):
+                "Time", "Magnetization", "Energy", "NumSuccesses")
+            print "{0:10d} {1:15.3f} {2:15.3f} {3:15d}".format(
+                0, self.magnetization_timeseries[0],
+                self.energy_timeseries[0], self.success_timeseries[0])
+        for time in self.times[1:]:
             num_successes = 0
             for j in xrange(self.steps_per_sweep):
-                selected_spin = np.random.random_integers(0, self.system_length, 2)
+                selected_spin = np.random.random_integers(0, self.system_length - 1, 2)
                 deltaE = self.calculate_deltaE(selected_spin)
                 if deltaE < 0:
-                    self.system[selected_spin] *= -1
+                    self.system[tuple(selected_spin)] *= -1
+                    num_successes += 1
+                    # print selected_spin, np.sum(self.system)
+                    # print self.system
                     continue
                 else:
-                    weight = boltmann_weight(deltaE, self.beta)
+                    weight = boltzmann_weight(deltaE, self.beta)
                     if np.random.rand() < weight:
-                        self.system[selected_spin] *= -1
-                    num_successes += 1
-            self.magnetization_timeseries[i] = self.calculate_magnetization()
-            self.energy_timeseries[i] = self.calculate_energy()
-            self.success_timeseries[i] = num_successes
+                        self.system[tuple(selected_spin)] *= -1
+                        num_successes += 1
+                        # print selected_spin, np.sum(self.system)
+                        # print self.system
+            self.magnetization_timeseries[time] = self.calculate_magnetization()
+            self.energy_timeseries[time] = self.calculate_energy()
+            self.success_timeseries[time] = num_successes
             if verbose:
                 print "{0:10d} {1:15.3f} {2:15.3f} {3:15d}".format(
-                    i, self.magnetization_timeseries[i],
-                    self.energy_timeseries[i], self.success_timeseries[i])
-            return
+                    time, self.magnetization_timeseries[time],
+                    self.energy_timeseries[time], self.success_timeseries[time])
+        return
 
 def boltzmann_weight(energy, beta):
     return np.exp(-1 * energy * beta)
@@ -113,8 +125,8 @@ def boltzmann_weight(energy, beta):
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('grid_size', help="NxN")
-    parser.add_argument('temperature', type=float)
+    parser.add_argument('grid_size', type=int, help="Provide N, grid will be NxN")
+    parser.add_argument('temperature', type=float, help="units of kT")
     parser.add_argument('--num-sweeps', type=int, default=2500)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--out-pkl', required=True, help='pkl log file')
@@ -123,13 +135,13 @@ def parse_args():
 def main(args):
     print "# ising_MCMC.py"
     print "# Initializing 2D ising system of size %dx%d" % (args.grid_size, args.grid_size)
-    print "# Will run at %.3f K for %d sweeps" % (args.temperature, args.num_sweeps)
+    print "# Will run at %.3f kT for %d sweeps" % (args.temperature, args.num_sweeps)
 
     ising_system = IsingSystem(args.grid_size, args.num_sweeps, args.temperature)
     ising_system.run_simulation(args.verbose)
 
     print "# Simulation completed"
-    with open(args.out_pkl) as f:
+    with open(args.out_pkl, 'w') as f:
         pkl.dump(dict(
             times=ising_system.times,
             magnetizations=ising_system.magnetization_timeseries,
