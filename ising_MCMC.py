@@ -4,7 +4,7 @@ ising_MCMC.py
 
 ising hamiltonian: -J sum pairs - H sum spins
 but i think H = 0
-
+ 
 questions:
 -what's the coupling constant?
 -what's the critical temperature? (i think lecture notes describe it in
@@ -25,12 +25,14 @@ class IsingSystem:
     """ 
     the (2D) ising system
     """
-    def __init__(self, size, sweeps, temperature):
+    def __init__(self, size, sweeps, temperature, external_field=0.,
+                 coupling_constant=1.):
         self.system = np.random.random_integers(0, 1, [size, size])
         self.system *= 2
         self.system -= 1
 
-        self.coupling_constant = 1 # let J be 1...
+        self.coupling_constant = coupling_constant # let J be 1
+        self.external_field = external_field
 
         # Used to calculate delta E from neighboring interactions:
         self.neighbor_positions = np.array([[0,1], [1,0], [0,-1], [-1,0]])
@@ -55,6 +57,7 @@ class IsingSystem:
             energy += -1 * np.sum(
                 [self.coupling_constant * i * j for i,j in zip(row[:-1], row[1:])]
                 )
+            energy += -1 * np.sum(self.external_field * row)
         for col in np.rollaxis(self.system, -1):
             energy += -1 * np.sum(
                 [self.coupling_constant * i * j for i,j in zip(col[:-1], col[1:])]
@@ -73,9 +76,11 @@ class IsingSystem:
                 # our position is some edge spin and no PBC in effect
                 continue
             neighboring_spins[i] = neighboring_spin
-        new_position_spin = -1 * self.system[tuple(position)]
-        deltaE = (-self.coupling_constant * np.sum(new_position_spin * neighboring_spins) -
-                  -self.coupling_constant * np.sum(self.system[tuple(position)] * neighboring_spins))
+        current_E = -1 * self.coupling_constant * np.sum(
+            self.system[tuple(position)] * neighboring_spins)
+        current_E += -1 * self.external_field * self.system[tuple(position)]
+        new_E = -1 * current_E
+        deltaE = new_E - current_E
         return deltaE
             
     def calculate_magnetization(self):
@@ -130,6 +135,7 @@ def parse_args():
     parser.add_argument('--num-sweeps', type=int, default=2500)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--out-pkl', required=True, help='pkl log file')
+    parser.add_argument('--H', type=float, default=0., help="external magnetic field")
     return parser.parse_args()
 
 def main(args):
@@ -137,7 +143,8 @@ def main(args):
     print "# Initializing 2D ising system of size %dx%d" % (args.grid_size, args.grid_size)
     print "# Will run at %.3f kT for %d sweeps" % (args.temperature, args.num_sweeps)
 
-    ising_system = IsingSystem(args.grid_size, args.num_sweeps, args.temperature)
+    ising_system = IsingSystem(args.grid_size, args.num_sweeps, args.temperature,
+                               external_field=args.H)
     ising_system.run_simulation(args.verbose)
 
     print "# Simulation completed"
