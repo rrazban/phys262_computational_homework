@@ -18,6 +18,8 @@ terms of J and zeta)
 KBOLTZMANN = 1.3806488e-23      # joule/kelvin
 # note 0.0019872041 kcal/(mol K)
 import numpy as np
+import cPickle as pkl
+import sys
 
 class IsingSystem:
     """ 
@@ -33,9 +35,10 @@ class IsingSystem:
         # Used to calculate delta E from neighboring interactions:
         self.neighbor_positions = np.array([[0,1], [1,0], [0,-1], [-1,0]])
 
-        times = np.arange(sweeps)
-        magnetization_timeseries = np.zeros(sweeps)
-        energy_timeseries = np.zeros(sweeps)
+        self.times = np.arange(sweeps)
+        self.magnetization_timeseries = np.zeros(sweeps)
+        self.energy_timeseries = np.zeros(sweeps)
+        self.success_timeseries = np.zeros(sweeps, dtype=int) # track number of accepted moves per sweep
         self.system_length = size
         self.steps_per_sweep = self.system.size
         self.beta = KBOLTZMANN * temperature
@@ -77,11 +80,13 @@ class IsingSystem:
     def calculate_magnetization(self):
         return np.sum(self.system)
 
-    def run_simulation(self, sweeps):
+    def run_simulation(self, verbose=False):
         """ where steps is number of sweeps"""
-        if not self.initialized:
-            return
-        for i in xrange(sweeps):
+        if verbose:
+            print "{0:>10} {1:>15} {2:>15} {3:>15}".format(
+                "Times", "Magnetization", "Energy", "NumSuccesses")
+        for i in xrange(times.size):
+            num_successes = 0
             for j in xrange(self.steps_per_sweep):
                 selected_spin = np.random.random_integers(0, self.system_length, 2)
                 deltaE = self.calculate_deltaE(selected_spin)
@@ -92,9 +97,15 @@ class IsingSystem:
                     weight = boltmann_weight(deltaE, self.beta)
                     if np.random.rand() < weight:
                         self.system[selected_spin] *= -1
+                    num_successes += 1
             self.magnetization_timeseries[i] = self.calculate_magnetization()
             self.energy_timeseries[i] = self.calculate_energy()
-        return
+            self.success_timeseries[i] = num_successes
+            if verbose:
+                print "{0:10d} {1:15.3f} {2:15.3f} {3:15d}".format(
+                    i, self.magnetization_timeseries[i],
+                    self.energy_timeseries[i], self.success_timeseries[i])
+            return
 
 def boltzmann_weight(energy, beta):
     return np.exp(-1 * energy * beta)
@@ -105,14 +116,24 @@ def parse_args():
     parser.add_argument('grid_size', help="NxN")
     parser.add_argument('temperature', type=float)
     parser.add_argument('--num-sweeps', type=int, default=2500)
+    parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--out-pkl', required=True, help='pkl log file')
     return parser.parse_args()
 
 def main(args):
-    ising_system = IsingSystem(args.grid_size)
-    ising_system.initialize_simulation(args.num_sweeps, args.temperature)
-    
+    print "# ising_MCMC.py"
+    print "# Initializing 2D ising system of size %dx%d" % (args.grid_size, args.grid_size)
+    print "# Will run at %.3f K for %d sweeps" % (args.temperature, args.num_sweeps)
 
+    ising_system = IsingSystem(args.grid_size, args.num_sweeps, args.temperature)
+    ising_system.run_simulation(args.verbose)
+
+    print "# Simulation completed"
+    with open(args.out_pkl) as f:
+        pkl.dump(dict(
+            times=ising_system.times,
+            magnetizations=ising_system.magnetization_timeseries,
+            energies=ising_system.energy_timeseries), f)
 
 if __name__ == "__main__":
     main(parse_args())
