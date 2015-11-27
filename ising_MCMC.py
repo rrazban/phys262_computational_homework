@@ -8,7 +8,7 @@ but i think H = 0
 questions:
 -what's the coupling constant?
 -what's the critical temperature? (i think lecture notes describe it in
-terms of J and zeta)
+terms of J and zeta) ---> 2.269
 -do we do temperature in beta or in K
 
 @author - Victor Zhao
