@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pkl-group', nargs='+')
+    parser.add_argument('--pkl-group', action="append", nargs='+')
     return parser.parse_args()
 
 def main(args):
