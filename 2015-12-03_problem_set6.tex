@@ -1,5 +1,5 @@
 %----------------------------------------------------------------------------------------
-%	problem set 6 phys 262 due 03 Dec 2015 (or actually before final time)
+%	problem set 6 phys 262 due 03 Dec 2015 (or actually before final time?)
 %----------------------------------------------------------------------------------------
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Short Sectioned Assignment
@@ -29,6 +29,7 @@
 \usepackage{amsmath,amsfonts,amsthm,bm} % Math packages (bm added by victor)
 
 \usepackage{listings}           % for code inclusion (added by victor)
+\lstset{basicstyle=\footnotesize\ttfamily}
 
 \usepackage{lipsum} % Used for inserting dummy 'Lorem ipsum' text into the template
 
@@ -77,11 +78,11 @@
 \normalfont \normalsize 
 \textsc{Harvard Physics 262: Statistical Physics - Problem Set 6} \\ [20pt] % Your university, school and/or department name(s)
 % \horrule{0.5pt} \\[0.4cm] % Thin top horizontal rule
-% \large Problem Set 2 \\ % The assignment title
+% \large Problem Set 6 \\ % The assignment title
 % \horrule{2pt} \\[0.5cm] % Thick bottom horizontal rule
 }
 
-\author{Yuanchi ``Victor'' Zhao} % Your name
+\author{Rostam Razban & Yuanchi Zhao} % Your name
 
 \date{\normalsize 03 December 2015} % Today's date or a custom date
 
@@ -92,66 +93,15 @@
 % 1 ------------------------------------------------------------------------------------------
 \section{Metropolis Simulation}
 
-% --------------------------------------------------
+% a --------------------------------------------------
 \subsection{MCMC transition matrix}
 
 The induced magnetic moment is the sum of the moment of each atom
-projected in the direction of $H$. So the approach is to obtain $M =
-N*\mu \langle \cos \alpha \rangle$. The contribution of the positions
-and momenta to the partition function is separable:
 
-\begin{align}
-  Q(N,V,T) &= \frac{1}{h^{3N}} \int d^N\vec{p} \int d^N\vec{q} \exp(-\beta \bar{\Haml}) Z \\
-  &= \frac{V^N}{N! \lambda^{3N}} Z(N,H,T)\\
-  \lambda &= \sqrt{ \frac{\beta h^2}{2\pi m} }
-\end{align}
-
-where our magnetic partition function, $Z$, is obtained by integrating
-all rotational orientations of the magnetic moment of each atom.
-
-\begin{align}
-  Z = \left[ \int_0^{2\pi} d\phi \int_0^\pi d\alpha \, \mu^2 \sin (\alpha) \exp( +\beta\mu H \cos \alpha) \right]^N
-\end{align}
-
-Because there are no interaction terms between atoms, we can calculate
-the expectation value of $\cos \alpha$ for one atom, and multiply by
-$N\mu$ to obtain the total induced magnetic moment.
-
-\begin{align}
-  \langle \cos \alpha \rangle &= \frac{\int_0^{2\pi} d\phi \int_0^\pi d\alpha \, \mu^2 \cos(\alpha) \sin (\alpha) \exp( \beta\mu H \cos \alpha)} {Z_1} \\
-                              &= \frac{ \int_0^{2\pi} d\phi \int_0^\pi d\alpha \, \mu^2 \cos(\alpha) \sin(\alpha) \exp( \beta\mu H \cos \alpha)}
-                                {\int_0^{2\pi} d\phi \int_0^\pi d\alpha \, \mu^2 \sin (\alpha) \exp( \beta\mu H \cos \alpha)} \\
-                              &= \frac{\int_0^\pi d\alpha \, \cos(\alpha) \sin(\alpha) \exp( \beta\mu H \cos \alpha)}
-                                {\int_0^\pi d\alpha \, \sin (\alpha) \exp( \beta\mu H \cos \alpha)} \\
-                              &= \frac{-1}{\beta\mu H} \frac{\int_0^\pi d\alpha \, \cos(\alpha) \frac{d}{d\alpha} \exp( \beta\mu H \cos \alpha)}
-                                {\int_0^\pi d\alpha \, \sin (\alpha) \exp( \beta\mu H \cos \alpha)} \\
-                              &= \frac{-1}{\beta\mu H} \left[ \frac{ \cos (\alpha) \exp(\beta\mu H \cos \alpha) |_0^\pi + \int_0^\pi d\alpha \, \sin(\alpha) \exp( \beta\mu H \cos \alpha)}
-                                {\int_0^\pi d\alpha \, \sin (\alpha) \exp( \beta\mu H \cos \alpha)} \right] \\
-                              &= \frac{-1}{\beta\mu H} \frac{\left( -\exp(-\beta\mu H) - \exp(\beta\mu H)  \right)}
-                                {\int_0^\pi d\alpha \, \sin (\alpha) \exp( \beta\mu H \cos \alpha)} - \frac{1}{\beta\mu H} \\
-                              &= \frac{1}{\beta\mu H} \frac{\left( \exp(-\beta\mu H) + \exp(\beta\mu H)  \right)}
-                                {\frac{1}{-\beta\mu H} \int_0^\pi d\alpha \frac{d}{d\alpha} \exp( \beta\mu H \cos \alpha)} - \frac{1}{\beta\mu H} \\
-                              &= \frac{-\left( \exp(-\beta\mu H) + \exp(\beta\mu H)  \right)}
-                                {\exp( \beta\mu H \cos \alpha) |_0^\pi } - \frac{1}{\beta\mu H} \\
-                              &= \frac{-\left( \exp(-\beta\mu H) + \exp(\beta\mu H)  \right)}
-                                {\left( \exp(-\beta\mu H) - \exp(\beta\mu H) \right)} - \frac{1}{\beta\mu H} \\
-                              &= \frac{\left( \exp(\beta\mu H) + \exp(-\beta\mu H)  \right)}
-                                {\left( \exp(\beta\mu H) - \exp(-\beta\mu H) \right)} - \frac{1}{\beta\mu H} \\
-                              &= \coth (\beta\mu H) - \frac{1}{\beta\mu H}
-\end{align}
-
-Where we've used integration by parts. So therefore
-
-\begin{align}
-  M &= N\mu \langle {\cos \alpha} \rangle\\
-  M &= N\mu(\coth \theta - \frac{1}{\theta})\\
-  \theta &= \beta \mu H = \frac{\beta\mu}{kT}
-\end{align}
-
-% --------------------------------------------------
+% b --------------------------------------------------
 \subsection{Metropolis algorithm implementation}
 
-The code, ising_MCMC.py, is appended. For system sizes, $4x4$, $8x8$,
+The code, ising\_MCMC.py, is appended. For system sizes, $4x4$, $8x8$,
 and $32x32$, 2500-sweep runs were run at 1.5, 2.0, 2.2, 2.3, 2.6 and
 3.0 kT (coupling constant $J=1$). Plots of $E(\tau)$ and $M(\tau)$ are
 attached. To run the program:
@@ -167,22 +117,17 @@ attached. To run the program:
 \end{lstlisting}
 
 
-% --------------------------------------------------
-\subsection{SImulation results}
+% c --------------------------------------------------
+\subsection{Simulation results}
 
 $\chi$ in the limit of high temperatures. Using Mathematica,
 
-\begin{align}
-  \lim_{T->\infty} &\left[\frac{k^2T^2}{\mu^2H^2} - \text{csch}^2(\frac{\mu H}{kT})\right] = 1/3\\
-                  \chi &= \frac{\mu^2 }{3kT}\\
-                         C &= \frac{\mu^2}{3k}
-\end{align}
 
-% --------------------------------------------------
+% d --------------------------------------------------
 \subsection{Critical exponents}
 
 
-% --------------------------------------------------
+% e --------------------------------------------------
 \subsection{Finite size scaling}
 
 
