@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python
 """
 ising_MCMC.py
 

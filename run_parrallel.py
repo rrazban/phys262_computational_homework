@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python
 
 #run ising_MCMC.py multiple times in parralel
 
@@ -39,7 +39,7 @@ def mp_run(par, nproks):
 		p.join()
 
 if __name__=='__main__':
-	nprocs=8		#number proccessors over which to parallize, make sure it !> max nprocs
+	nprocs=8		#number proccessors over which to parallize, make sure nprocs !> max processors of your computer
 	parameters=parse_args()
 	begin=str(datetime.now())
 	mp_run(parameters,nprocs)
