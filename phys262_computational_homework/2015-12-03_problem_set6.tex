@@ -88,15 +88,39 @@
 
 \begin{document}
 
-\maketitle % Print the title
+%\maketitle % Print the title
 
 % 1 ------------------------------------------------------------------------------------------
 \section{Metropolis Simulation}
 
 % a --------------------------------------------------
 \subsection{MCMC transition matrix}
+The transition matrix W is written as
+\begin{align}
+W(C\rightarrow C^{'}) &= e^{-\beta (E(C^{'})-E(C))} \label{tmat}\\
+W(C^{'}\rightarrow C) &= 1
+\end{align}
+when $E(C^{'})>E(C)$
 
-The induced magnetic moment is the sum of the moment of each atom
+\subsubsection{Prove ergodicity}
+For ergodicity, it suffices to show that there exists one stationary probability.
+\begin{align}
+P_{st}(C^{'})=\sum\limits_{C} P_{st}(C)W(C\rightarrow C^{'}) 
+\end{align}
+Plugging in \ref{tmat}, one obtains
+\begin{align}
+P_{st}(C^{'})&=e^{-\beta E(C^{'})}\sum\limits_{C}  P_{st}(C) e^{\beta E(C)}\\
+P_{st}(C^{'})&=e^{-\beta E(C^{'})}\alpha
+\end{align}
+where $\alpha$ is just a constant.
+\subsubsection{Prove detailed balance w.r.t. equilibrium weight}
+\begin{align}
+\dfrac{W(C\rightarrow C^{'})}{W(C^{'}\rightarrow C)} = \dfrac{e^{-\beta (E(C^{'})-E(C))}}{1} \label{ratio}
+\end{align}
+Rearranging \ref{ratio}, one obtains
+\begin{align}
+e^{-\beta E(C)}W(C\rightarrow C^{'}) = e^{-\beta E(C^{'})}W(C^{'}\rightarrow C)
+\end{align}
 
 % b --------------------------------------------------
 \subsection{Metropolis algorithm implementation}

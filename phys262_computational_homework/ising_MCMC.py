@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/python
 """
 ising_MCMC.py
 
@@ -133,13 +133,13 @@ def parse_args():
     parser.add_argument('temperature', type=float, metavar='TEMP', help="units of kT")
     parser.add_argument('--num-sweeps', type=int, metavar='NUM', default=2500)
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--out-pkl', required=True, metavar='OUT.pkl',
-                        help='pkl log file')
+#    parser.add_argument('--out-pkl', required=True, metavar='OUT.pkl',  help='pkl log file')
     parser.add_argument('--H', type=float, default=0., metavar='FIELD',
                         help="external magnetic field")
+    parser.add_argument('--num-sims', type=int, metavar='NUM', default=1)  #so that compatible with parrallel_run.py
     return parser.parse_args()
 
-def main(args):
+def main(args,ver):
     print "# ising_MCMC.py"
     print "# Initializing 2D ising system of size %dx%d" % (
         args.grid_size, args.grid_size)
@@ -149,12 +149,12 @@ def main(args):
                                args.temperature, external_field=args.H)
     ising_system.run_simulation(args.verbose)
 
-    with open(args.out_pkl, 'w') as f:
+    with open(ver, 'w') as f:
         pkl.dump(dict(
             times=ising_system.times,
             magnetizations=ising_system.magnetization_timeseries,
             energies=ising_system.energy_timeseries), f)
-    print "# Simulation completed. Data written to %s" % args.out_pkl
+    print "# Simulation completed. Data written to %s" % ver
 
 if __name__ == "__main__":
-    main(parse_args())
+    main(parse_args(),'default_name')
